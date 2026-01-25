@@ -27692,7 +27692,7 @@ function truncateCommits(version, maxChars) {
         const underOver = 0 < deltaPercent ? 'over' : 'under';
         coreExports.info(`Progress [${description}]: ${plural(chars, 'character')}`
             + ` ${Math.abs(deltaPercent).toFixed(1)}% ${underOver} budget`
-            + ` (limits: ${plural(maxCommits, 'commit')} / ${plural(maxMessageChars, 'characters')})`);
+            + ` (limits: ${plural(maxCommits, 'commit')} / ${plural(maxMessageChars, 'character')})`);
     }
     logProgress('Initial commits');
     // First try truncating commit messages to a nominal maximum length
