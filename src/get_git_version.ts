@@ -72,10 +72,9 @@ function getReleaseLog(cwd: string, baseTag: string): GitVersionCommit[] | undef
 // Run a Git command in a specific working directory and capture its output
 function git(cwd: string, ...args: string[]): string | undefined {
     try {
-        const cmd = `git ${args.join(' ')}`;
-        core.debug(`exec: ${cmd}`);
-        const output = child_process.execFileSync(cmd, { cwd, timeout: GIT_TIMEOUT, encoding: 'utf-8' });
-        core.debug(`exec stdout:\n${output}`);
+        core.debug(`execFileSync: git ${args.join(' ')}`);
+        const output = child_process.execFileSync('git', args, { cwd, timeout: GIT_TIMEOUT, encoding: 'utf-8' });
+        core.debug(`execFileSync stdout:\n${output}`);
         return output.trim();
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
