@@ -1,0 +1,78 @@
+{
+    "name": "action-test-context",
+    "version": "1.0.0",
+    "description": "GitHub workflow action to prepare the result of a test run for AI inference",
+    "keywords": [
+        "GitHub",
+        "action",
+        "workflow",
+        "repo",
+        "repository",
+        "test",
+        "CI",
+        "AI",
+        "LLM",
+        "inference",
+        "context"
+    ],
+    "author": {
+        "name": "Alexander Thoukydides",
+        "url": "https://www.thouky.co.uk/"
+    },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/thoukydides"
+        },
+        {
+            "type": "paypal",
+            "url": "https://paypal.me/thoukydides"
+        },
+        {
+            "type": "ko-fi",
+            "url": "https://ko-fi.com/thouky"
+        },
+        {
+            "type": "buymeacoffee",
+            "url": "https://www.buymeacoffee.com/thouky"
+        }
+    ],
+    "homepage": "https://github.com/thoukydides/action-test-context#readme",
+    "bugs": {
+        "url": "https://github.com/thoukydides/action-test-context/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/thoukydides/action-test-context.git"
+    },
+    "license": "ISC",
+    "type": "module",
+    "devDependencies": {
+        "@actions/core": "^2.0.2",
+        "@actions/github": "^7.0.0",
+        "@eslint/eslintrc": "^3.3.3",
+        "@eslint/js": "^9.39.2",
+        "@rollup/plugin-commonjs": "^29.0.0",
+        "@rollup/plugin-node-resolve": "^16.0.3",
+        "@rollup/plugin-typescript": "^12.3.0",
+        "@tsconfig/node20": "^20.1.8",
+        "@types/node": "^20.19.29",
+        "@types/semver": "^7.7.1",
+        "eslint": "^9.39.2",
+        "globals": "^17.0.0",
+        "husky": "^9.1.7",
+        "rimraf": "^6.1.2",
+        "rollup": "^4.55.1",
+        "semver": "^7.7.3",
+        "tslib": "^2.8.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.53.0"
+    },
+    "scripts": {
+        "build": "npm run clean && npm run lint && npm run rollup",
+        "clean": "rimraf ./dist",
+        "rollup": "rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
+        "lint": "eslint eslint.config.mjs 'src/**/*.ts' --max-warnings=0",
+        "prepare": "husky"
+    }
+}

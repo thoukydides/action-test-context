@@ -1,0 +1,42 @@
+name: Test Context
+author: Alexander Thoukydides
+description: Prepare test run exit code and log for use as context for AI inference
+branding:
+  icon: 'terminal'
+  color: 'gray-dark'
+
+inputs:
+  exit_code:
+    description: The test's exit code; 0 for success
+    type: number
+    required: true
+  log_file:
+    description: Path to a file containing the test's stdout/stderr output
+    type: string
+    required: true
+  log_regexps:
+    description: Regular expressions (one per line) applied to the log to identify additional lines that should be included in the context
+    type: string
+    default: ''
+  checkout_path:
+    description: Relative path under $GITHUB_WORKSPACE (not the working directory) to the Git checkout
+    type: string
+    default: '.'
+  max_tokens:
+    description: The maximum number of tokens to use (approximated by character count)
+    type: number
+    default: 500
+  github_token:
+    description: The GitHub token used to create an authenticated client
+    type: string
+    default: ${{ github.token }}
+
+outputs:
+  value:
+    description: JSON object summarising the test run prepared for LLM input context
+  version:
+    description: A short description of the checkout that was tested (e.g. 'v1.0.0' or 'v1.0.0 + 5 commits') suitable for inclusion in the data source name
+
+runs:
+  using: node20
+  main: dist/index.js
