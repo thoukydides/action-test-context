@@ -24,7 +24,7 @@ export function truncateCommits(version: GitVersion, maxChars: number): ResultGi
         const underOver = 0 < deltaPercent ? 'over' : 'under';
         core.info(`Progress [${description}]: ${plural(chars, 'character')}`
                 + ` ${Math.abs(deltaPercent).toFixed(1)}% ${underOver} budget`
-                + ` (limits: ${plural(maxCommits, 'commit')} / ${plural(maxMessageChars, 'characters')})`);
+                + ` (limits: ${plural(maxCommits, 'commit')} / ${plural(maxMessageChars, 'character')})`);
     }
     logProgress('Initial commits');
 
