@@ -27538,7 +27538,7 @@ function getReleaseLog(cwd, baseTag) {
     //   %aI = author date, strict ISO 8601 format
     //   %s  = subject (commit message)
     const log = git(cwd, 'log', `${baseTag}..HEAD`, "--pretty=format:'%aI %s'");
-    if (!log)
+    if (log === undefined)
         return;
     // Parse the commit log
     const lines = log.split('\n');
