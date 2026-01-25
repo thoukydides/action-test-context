@@ -27554,10 +27554,9 @@ function getReleaseLog(cwd, baseTag) {
 // Run a Git command in a specific working directory and capture its output
 function git(cwd, ...args) {
     try {
-        const cmd = `git ${args.join(' ')}`;
-        coreExports.debug(`exec: ${cmd}`);
-        const output = require$$2$2.execFileSync(cmd, { cwd, timeout: GIT_TIMEOUT, encoding: 'utf-8' });
-        coreExports.debug(`exec stdout:\n${output}`);
+        coreExports.debug(`execFileSync: git ${args.join(' ')}`);
+        const output = require$$2$2.execFileSync('git', args, { cwd, timeout: GIT_TIMEOUT, encoding: 'utf-8' });
+        coreExports.debug(`execFileSync stdout:\n${output}`);
         return output.trim();
     }
     catch (err) {
