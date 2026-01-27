@@ -27563,11 +27563,13 @@ function getReleaseLog(cwd, baseTag) {
     // Parse the commit log
     const lines = log.split('\n');
     return lines.flatMap(line => {
-        const [commit_at, message] = line.split(' ', 2);
-        if (!commit_at || !message) {
+        const spaceIndex = line.indexOf(' ');
+        if (spaceIndex === -1) {
             coreExports.warning(line, { title: 'Unexpected git log format' });
             return [];
         }
+        const commit_at = line.substring(0, spaceIndex);
+        const message = line.substring(spaceIndex + 1).trim();
         return [{ commit_at, message }];
     });
 }
