@@ -37,7 +37,10 @@ The action provides the following outputs:
 | Name | Description
 | --- | ---
 | `value` | JSON object summarising the test run prepared for LLM input context
-| `version` | A short description of the checkout that was tested (e.g. `v1.0.0` or `v1.0.0 + 5 commits`) suitable for inclusion in the data source name
+| `version_description` | A short description of the checkout that was tested (e.g. `v1.0.0` or `v1.0.0 + 5 commits`) suitable for inclusion in the data source name
+| `version_tag` | The most recent Git tag in the checkout's history, or empty if none found
+| `version_unreleased` | Are there any unreleased commits since the most recent Git tag; `false` if no release was found
+| `version_url` | A URL to the most recent Git tag's release page, the diff of unreleased changes, the repository's home page
 
 ## Usage
 
