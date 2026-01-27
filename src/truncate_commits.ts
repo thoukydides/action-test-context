@@ -6,8 +6,9 @@ import { GitVersion, GitVersionCommit } from './get_git_version.js';
 import { ResultGitVersion, ResultGitVersionCommit } from './result_context.js';
 import { plural } from './utils.js';
 
-// Commit message truncation length before omitting commits
-const MAX_COMMIT_CHARS = 200;
+// Commit message truncation length range
+const MAX_COMMIT_CHARS = 200;   // Before omitting down to MIN_COMMITS
+const MIN_COMMIT_CHARS = 50;    // Final minimum
 
 // Minimum number of commit messages
 const MIN_COMMITS = 10;
@@ -34,11 +35,15 @@ export function truncateCommits(version: GitVersion, maxChars: number): ResultGi
 
     // Omit the oldest commit messages down to a minimum size
     maxCommits = fitByOmission(commits, maxChars, { minCommits: MIN_COMMITS, maxMessageChars });
-    logProgress('Omitted commits');
+    logProgress('Omitted commits 1');
 
-    // Truncate commit messages (without a minimum length) if still too long
-    maxMessageChars = fitByMessageTruncation(commits, maxChars, { maxCommits });
+    // Truncate commit messages more aggressively
+    maxMessageChars = fitByMessageTruncation(commits, maxChars, { maxCommits, minMessageChars: MIN_COMMIT_CHARS });
     logProgress('Truncated messages 2');
+
+    // Omit the oldest commit messages without a minimum size
+    maxCommits = fitByOmission(commits, maxChars, { maxMessageChars });
+    logProgress('Omitted commits 2');
 
     // Return the truncated commit history
     const commits_since_release = makeTruncatedCommits(commits, maxCommits, maxMessageChars);
