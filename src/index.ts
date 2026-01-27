@@ -2,12 +2,13 @@
 // Copyright © 2026 Alexander Thoukydides
 
 import * as core from '@actions/core';
-import { getGitVersion, GitVersion } from './get_git_version.js';
+import { getGitVersion } from './get_git_version.js';
 import { plural } from './utils.js';
 import { getLogLines, LogEntry } from './get_log.js';
 import { makeResultContext, resultContextChars } from './result_context.js';
 import { truncateCommits } from './truncate_commits.js';
 import { excludeZeroScoreLog, truncateLog } from './truncate_log.js';
+import { getVersionResults } from './result_version.js';
 
 // GPT tokeniser: 1 token ≈ 4 prose characters or 3-3.5 for code/logs
 const CHARS_PER_TOKEN = 3; // (assume worst case when truncating to fit)
@@ -29,8 +30,8 @@ function run(): void {
 
     // Retrieve details of the latest release and post-release commits
     const gitVersion = getGitVersion(checkout_path);
-    const versionSummary = getVersionSummary(gitVersion);
-    core.info(`Checked out code: ${versionSummary}`);
+    const version = getVersionResults(gitVersion);
+    core.info(`Checked out code: ${version.description}`);
 
     // Read and score the log file lines
     const logLines = getLogLines(log_file, log_regexps);
@@ -58,17 +59,11 @@ function run(): void {
     const value = makeResultContext(isSuccess, truncatedLogLines, truncatedGitVersion);
 
     // Action outputs
-    core.setOutput('value',     value);
-    core.setOutput('version',   versionSummary);
-}
-
-// Generate a concise description of the checked out code
-function getVersionSummary(gitVersion?: GitVersion): string {
-    if (!gitVersion) return 'unknown version';
-    const { base_version, commits_since_release } = gitVersion;
-    if (!base_version) return 'HEAD';
-    const n = commits_since_release.length;
-    return n === 0 ? base_version : `${base_version} + ${plural(n, 'commit')}`;
+    core.setOutput('value',                 value);
+    core.setOutput('version_description',   version.description);
+    core.setOutput('version_tag',           version.tag);
+    core.setOutput('version_unreleased',    version.unreleased);
+    core.setOutput('version_url',           version.url);
 }
 
 // Run the script and handle errors

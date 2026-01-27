@@ -27507,21 +27507,41 @@ const GIT_TIMEOUT = 10_000; // (10 seconds)
 const RELEASE_TAG_GLOB = 'v[0-9]*.[0-9]*.[0-9]*';
 // Retrieve details of the latest release and post-release commits
 function getGitVersion(checkout_path) {
+    const repo = getRepo(checkout_path);
+    if (!repo) {
+        coreExports.warning('Unable to determine repository owner and name');
+        return;
+    }
     // Try to retrieve the tag for the latest release
-    const releaseTag = getReleaseTag(checkout_path);
-    if (!releaseTag) {
+    const base_version = getReleaseTag(checkout_path);
+    if (!base_version) {
         coreExports.warning('No release tag found');
         return;
     }
     // Try to retrieve the commit log since the latest release
-    const commits = getReleaseLog(checkout_path, releaseTag);
+    const commits = getReleaseLog(checkout_path, base_version);
     if (commits === undefined) {
         coreExports.warning('Failed to retrieve commits since release tag');
     }
-    return {
-        base_version: releaseTag,
-        commits_since_release: commits ?? []
-    };
+    return { repo, base_version, commits_since_release: commits ?? [] };
+}
+// Retrieve the repo owner and name
+function getRepo(cwd) {
+    // Find the remote origin
+    const url = git(cwd, 'remote', 'get-url', 'origin');
+    if (!url?.length)
+        return;
+    // Parse the origin URL to extract the owner and repo
+    //   https://github.com/user/repo.git
+    //   https://github.com/user/repo
+    //   git@github.com:user/repo.git
+    //   git@github.com:user/repo
+    const [, owner, repo] = /[:/]([\w-]+)\/([\w.-]+?)(?:\.git)?$/.exec(url) ?? [];
+    if (!owner || !repo) {
+        coreExports.warning(url, { title: 'Unable to parse origin URL' });
+        return;
+    }
+    return { owner, repo };
 }
 // Retrieve the tag for the latest release
 function getReleaseTag(cwd) {
@@ -27842,6 +27862,39 @@ function makeTruncatedLogLines(logLines, maxChars) {
 
 // GitHub action
 // Copyright © 2026 Alexander Thoukydides
+// Provide useful results based on the version information
+function getVersionResults(gitVersion) {
+    return {
+        description: getVersionDescription(gitVersion),
+        tag: gitVersion?.base_version ?? '',
+        unreleased: Boolean(gitVersion?.commits_since_release.length),
+        url: getVersionURL(gitVersion)
+    };
+}
+// Generate a concise description of the checked out code
+function getVersionDescription(gitVersion) {
+    if (!gitVersion)
+        return 'unknown version';
+    const { base_version, commits_since_release } = gitVersion;
+    if (!base_version)
+        return 'HEAD';
+    const n = commits_since_release.length;
+    return n === 0 ? base_version : `${base_version} + ${plural(n, 'commit')}`;
+}
+// Generate a URL to the release or diff since release
+function getVersionURL(gitVersion) {
+    const repo = gitVersion ? `${gitVersion.repo.owner}/${gitVersion.repo.repo}`
+        : process.env.GITHUB_REPOSITORY;
+    const baseUrl = `https://github.com/${repo}`;
+    if (!gitVersion?.base_version)
+        return baseUrl;
+    return gitVersion.commits_since_release.length
+        ? `${baseUrl}/compare/${gitVersion.base_version}...HEAD`
+        : `${baseUrl}/releases/tag/${gitVersion.base_version}`;
+}
+
+// GitHub action
+// Copyright © 2026 Alexander Thoukydides
 // GPT tokeniser: 1 token ≈ 4 prose characters or 3-3.5 for code/logs
 const CHARS_PER_TOKEN = 3; // (assume worst case when truncating to fit)
 // Proportion of context for commits if budget exceeded
@@ -27858,8 +27911,8 @@ function run() {
     const isSuccess = exit_code === 0;
     // Retrieve details of the latest release and post-release commits
     const gitVersion = getGitVersion(checkout_path);
-    const versionSummary = getVersionSummary(gitVersion);
-    coreExports.info(`Checked out code: ${versionSummary}`);
+    const version = getVersionResults(gitVersion);
+    coreExports.info(`Checked out code: ${version.description}`);
     // Read and score the log file lines
     const logLines = getLogLines(log_file, log_regexps);
     // Exclude score 0 log lines if test successful or there are higher scores
@@ -27881,17 +27934,10 @@ function run() {
     const value = makeResultContext(isSuccess, truncatedLogLines, truncatedGitVersion);
     // Action outputs
     coreExports.setOutput('value', value);
-    coreExports.setOutput('version', versionSummary);
-}
-// Generate a concise description of the checked out code
-function getVersionSummary(gitVersion) {
-    if (!gitVersion)
-        return 'unknown version';
-    const { base_version, commits_since_release } = gitVersion;
-    if (!base_version)
-        return 'HEAD';
-    const n = commits_since_release.length;
-    return n === 0 ? base_version : `${base_version} + ${plural(n, 'commit')}`;
+    coreExports.setOutput('version_description', version.description);
+    coreExports.setOutput('version_tag', version.tag);
+    coreExports.setOutput('version_unreleased', version.unreleased);
+    coreExports.setOutput('version_url', version.url);
 }
 // Run the script and handle errors
 try {

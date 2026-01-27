@@ -5,11 +5,16 @@ import * as core from '@actions/core';
 import child_process from 'child_process';
 
 // Details of the checked out repo relative to the latest release
+export interface GitVersionRepo {
+    owner:                  string;
+    repo:                   string;
+}
 export interface GitVersionCommit {
     commit_at:              string;
     message:                string;
 }
 export interface GitVersion {
+    repo:                   GitVersionRepo;
     base_version:           string;
     commits_since_release:  GitVersionCommit[];
 }
@@ -22,22 +27,44 @@ const RELEASE_TAG_GLOB = 'v[0-9]*.[0-9]*.[0-9]*';
 
 // Retrieve details of the latest release and post-release commits
 export function getGitVersion(checkout_path: string): GitVersion | undefined {
+    const repo = getRepo(checkout_path);
+    if (!repo) {
+        core.warning('Unable to determine repository owner and name');
+        return;
+    }
+
     // Try to retrieve the tag for the latest release
-    const releaseTag = getReleaseTag(checkout_path);
-    if (!releaseTag) {
+    const base_version = getReleaseTag(checkout_path);
+    if (!base_version) {
         core.warning('No release tag found');
         return;
     }
 
     // Try to retrieve the commit log since the latest release
-    const commits = getReleaseLog(checkout_path, releaseTag);
+    const commits = getReleaseLog(checkout_path, base_version);
     if (commits === undefined) {
         core.warning('Failed to retrieve commits since release tag');
     }
-    return {
-        base_version:           releaseTag,
-        commits_since_release:  commits ?? []
-    };
+    return { repo, base_version, commits_since_release: commits ?? [] };
+}
+
+// Retrieve the repo owner and name
+function getRepo(cwd: string): GitVersionRepo | undefined {
+    // Find the remote origin
+    const url = git(cwd, 'remote', 'get-url', 'origin');
+    if (!url?.length) return;
+
+    // Parse the origin URL to extract the owner and repo
+    //   https://github.com/user/repo.git
+    //   https://github.com/user/repo
+    //   git@github.com:user/repo.git
+    //   git@github.com:user/repo
+    const [, owner, repo] = /[:/]([\w-]+)\/([\w.-]+?)(?:\.git)?$/.exec(url) ?? [];
+    if (!owner || !repo) {
+        core.warning(url, { title: 'Unable to parse origin URL' });
+        return;
+    }
+    return { owner, repo };
 }
 
 // Retrieve the tag for the latest release
