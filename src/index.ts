@@ -60,10 +60,10 @@ function run(): void {
 
     // Action outputs
     core.setOutput('value',                 value);
-    core.setOutput('version_description',   version.description);
+    core.setOutput('version',               version.description);
+    core.setOutput('version_md',            version.markdown);
     core.setOutput('version_tag',           version.tag);
     core.setOutput('version_unreleased',    version.unreleased);
-    core.setOutput('version_url',           version.url);
 }
 
 // Run the script and handle errors

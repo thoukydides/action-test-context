@@ -27864,33 +27864,32 @@ function makeTruncatedLogLines(logLines, maxChars) {
 // Copyright © 2026 Alexander Thoukydides
 // Provide useful results based on the version information
 function getVersionResults(gitVersion) {
-    return {
-        description: getVersionDescription(gitVersion),
-        tag: gitVersion?.base_version ?? '',
-        unreleased: Boolean(gitVersion?.commits_since_release.length),
-        url: getVersionURL(gitVersion)
-    };
+    const [description, markdown] = getVersionDescription(gitVersion);
+    const tag = gitVersion?.base_version ?? '';
+    const unreleased = Boolean(gitVersion?.commits_since_release.length);
+    return { description, markdown, tag, unreleased };
 }
 // Generate a concise description of the checked out code
 function getVersionDescription(gitVersion) {
     if (!gitVersion)
-        return 'unknown version';
-    const { base_version, commits_since_release } = gitVersion;
+        return ['unknown version', 'unknown version'];
+    // Markdown formatting with links
+    const { repo, base_version, commits_since_release } = gitVersion;
+    const baseURL = `https://github.com/${repo.owner}/${repo.repo}`;
+    const link = (text, path) => `[${text}](${baseURL}/${path})`;
+    // No version information
     if (!base_version)
-        return 'HEAD';
-    const n = commits_since_release.length;
-    return n === 0 ? base_version : `${base_version} + ${plural(n, 'commit')}`;
-}
-// Generate a URL to the release or diff since release
-function getVersionURL(gitVersion) {
-    const repo = gitVersion ? `${gitVersion.repo.owner}/${gitVersion.repo.repo}`
-        : process.env.GITHUB_REPOSITORY;
-    const baseUrl = `https://github.com/${repo}`;
-    if (!gitVersion?.base_version)
-        return baseUrl;
-    return gitVersion.commits_since_release.length
-        ? `${baseUrl}/compare/${gitVersion.base_version}...HEAD`
-        : `${baseUrl}/releases/tag/${gitVersion.base_version}`;
+        return ['HEAD', link('HEAD', 'commits')];
+    // Checkout matches release version with no additional commits
+    const baseVersionLink = link(base_version, `releases/tag/${base_version}`);
+    if (!commits_since_release.length)
+        return [base_version, baseVersionLink];
+    // Commits exist beyond the release tag
+    const commitCount = plural(commits_since_release.length, 'commit');
+    return [
+        `${base_version} + ${commitCount}`,
+        `${baseVersionLink} + ${link(commitCount, `compare/${gitVersion.base_version}...HEAD`)}`
+    ];
 }
 
 // GitHub action
@@ -27934,10 +27933,10 @@ function run() {
     const value = makeResultContext(isSuccess, truncatedLogLines, truncatedGitVersion);
     // Action outputs
     coreExports.setOutput('value', value);
-    coreExports.setOutput('version_description', version.description);
+    coreExports.setOutput('version', version.description);
+    coreExports.setOutput('version_md', version.markdown);
     coreExports.setOutput('version_tag', version.tag);
     coreExports.setOutput('version_unreleased', version.unreleased);
-    coreExports.setOutput('version_url', version.url);
 }
 // Run the script and handle errors
 try {
