@@ -10,7 +10,7 @@ import { plural } from './utils.js';
 const MAX_COMMIT_CHARS = 200;
 
 // Minimum number of commit messages
-const MIN_COMMITS = 20;
+const MIN_COMMITS = 10;
 
 // Truncate commit history to fit within the model's input context
 export function truncateCommits(version: GitVersion, maxChars: number): ResultGitVersion {

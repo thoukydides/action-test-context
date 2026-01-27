@@ -27624,6 +27624,14 @@ function plural(count, noun, showCount = true) {
 
 // GitHub action
 // Copyright © 2026 Alexander Thoukydides
+// Match line endings (allowing CRLF, CR, or LF)
+const LINE_ENDING = /\r\n|(?<!\r)\n|\r(?!\n)/g;
+// Patters to strip from the log
+const LOG_STRIP_REGEXP = [
+    // Match ANSI colour codes (including textual representation of escape code)
+    // eslint-disable-next-line no-control-regex
+    /(?:\x1B|ESC)\[[0-9;]*[msuK]/g
+];
 // Patterns to recognise important log entries
 const LOG_REGEXP = [
     // GitHub Actions workflow commands
@@ -27633,22 +27641,18 @@ const LOG_REGEXP = [
 // Scores used for other log lines
 const SCORE_UNMATCHED = 0;
 const SCORE_USER_PATTERN = 50;
-// Match line endings (allowing CRLF, CR, or LF)
-const LINE_ENDING = /\r\n|(?<!\r)\n|\r(?!\n)/g;
-// Match ANSI colour codes (including textual representation of escape code)
-// eslint-disable-next-line no-control-regex
-const ANSI_ESCAPE = /(?:\x1B|ESC)\[[0-9;]*[msuK]/g;
 // Read the log file and score each line using the supplied patterns
-function getLogLines(log_file, log_regexps) {
+function getLogLines(log_file, log_regexps, log_strip_regexps) {
     // Read the log file
     const log = readFileSync(log_file, { encoding: 'utf-8' });
     const lines = log.split(LINE_ENDING);
     // Prepare the regular expressions to test against the log
     const patterns = makeRegexps(log_regexps);
+    const stripPatterns = makeStripRegexps(log_strip_regexps);
     // Score each line of the log
     const scoreCounts = new Map();
     const scored = lines.map((rawLine, index) => {
-        const line = rawLine.replaceAll(ANSI_ESCAPE, '').trim();
+        const line = stripPatterns.reduce((line, re) => line.replaceAll(re, ''), rawLine).trim();
         const score = patterns.reduce((acc, { re, score }) => re.test(line) || re.test(rawLine) ? Math.max(acc, score) : acc, SCORE_UNMATCHED);
         scoreCounts.set(score, (scoreCounts.get(score) ?? 0) + 1);
         return { line, score, index };
@@ -27678,6 +27682,20 @@ function makeRegexps(log_regexps) {
     }
     return patterns;
 }
+// Prepare the regular expressions to strip the log lines
+function makeStripRegexps(log_strip_regexps) {
+    const patterns = [...LOG_STRIP_REGEXP];
+    for (const log_strip_regexp of log_strip_regexps) {
+        if (!log_strip_regexp)
+            continue; // getMultilineInput trims *after* filtering blanks
+        const [, pattern, flags] = /^\/((?:\\.|[^\\/])+)\/([dimsuv]*)$/.exec(log_strip_regexp) ?? [];
+        if (!pattern || flags === undefined)
+            throw new Error(`Invalid log_strip_regexps pattern: ${log_strip_regexp}`);
+        const re = new RegExp(pattern, 'g' + flags); // (include global flag)
+        patterns.push(re);
+    }
+    return patterns;
+}
 
 // GitHub action
 // Copyright © 2026 Alexander Thoukydides
@@ -27700,7 +27718,7 @@ function resultContextChars(...params) {
 // Commit message truncation length before omitting commits
 const MAX_COMMIT_CHARS = 200;
 // Minimum number of commit messages
-const MIN_COMMITS = 20;
+const MIN_COMMITS = 10;
 // Truncate commit history to fit within the model's input context
 function truncateCommits(version, maxChars) {
     const { commits_since_release: commits, ...rest } = version;
@@ -27785,6 +27803,10 @@ function truncateCommitMessage(message, maxChars = Infinity) {
 
 // GitHub action
 // Copyright © 2026 Alexander Thoukydides
+// Minimum log message truncation length
+const MIN_LOG_CHARS = 100;
+// Minimum number of log lines to include
+const MIN_LOG_LINES = 1;
 // Exclude score 0 log lines if there are higher scores
 function excludeZeroScoreLog(logLines, alwaysExclude = false) {
     const anyNonZero = logLines.some(line => 0 < line.score);
@@ -27810,21 +27832,26 @@ function truncateLog(logLines, maxChars, getChars) {
     // Sort log lines by priority (descending score, then descending index)
     logLines = logLines.toSorted((a, b) => b.score - a.score || b.index - a.index);
     // Drop lowest priority lines until fits or only highest score remains
-    logLines = fitByOmission(logLines, maxChars, getChars);
-    logProgress('Selected log lines');
+    const priorityCount = getPriorityCount(logLines);
+    logLines = fitByOmission(logLines, priorityCount, maxChars, getChars);
+    logProgress('Selected priority log lines');
     // Truncate log lines if still too long
     logLines = fitByLineTruncation(logLines, maxChars, getChars);
     logProgress('Truncated log lines');
+    // Also drop priority lines down to a minimum size
+    logLines = fitByOmission(logLines, MIN_LOG_LINES, maxChars, getChars);
+    logProgress('Selected priority log lines');
     // Return the truncated log lines in their original (chronological) order
     return logLines.sort((a, b) => a.index - b.index);
 }
-// Attempt to fit log lines within budget by omitting lower priority lines
-function fitByOmission(logLines, maxChars, getChars) {
-    // Minimum number of lines to keep (equal highest score)
+// Determine the number of priority lines (those with equal highest score)
+function getPriorityCount(logLines) {
     const highestScore = logLines[0]?.score ?? 0;
-    let minLines = logLines.findIndex(line => line.score < highestScore);
-    if (minLines === -1)
-        return logLines;
+    const index = logLines.findIndex(line => line.score < highestScore);
+    return index === -1 ? logLines.length : index;
+}
+// Attempt to fit log lines within budget by omitting lower priority lines
+function fitByOmission(logLines, minLines, maxChars, getChars) {
     let maxLines = logLines.length;
     // Binary search to find the highest limit within available size
     while (minLines < maxLines) {
@@ -27839,7 +27866,7 @@ function fitByOmission(logLines, maxChars, getChars) {
 }
 // Fit log lines within the budget by truncating to a maximum length
 function fitByLineTruncation(logLines, maxChars, getChars) {
-    let minLineChars = 1;
+    let minLineChars = MIN_LOG_CHARS;
     let maxLineChars = Math.max(...logLines.map((l) => l.line.length), 0);
     // Binary search to find the highest limit within available size
     while (minLineChars < maxLineChars) {
@@ -27904,6 +27931,7 @@ function run() {
     const exit_code = Number(coreExports.getInput('exit_code', { required: true }));
     const log_file = coreExports.getInput('log_file', { required: true });
     const log_regexps = coreExports.getMultilineInput('log_regexps', { required: true });
+    const log_strip_regexps = coreExports.getMultilineInput('log_strip_regexps', { required: true });
     const checkout_path = coreExports.getInput('checkout_path', { required: true });
     const max_tokens = Number(coreExports.getInput('max_tokens', { required: true }));
     // Only care whether the exit code indicates success or failure
@@ -27913,7 +27941,7 @@ function run() {
     const version = getVersionResults(gitVersion);
     coreExports.info(`Checked out code: ${version.description}`);
     // Read and score the log file lines
-    const logLines = getLogLines(log_file, log_regexps);
+    const logLines = getLogLines(log_file, log_regexps, log_strip_regexps);
     // Exclude score 0 log lines if test successful or there are higher scores
     const filteredLogLines = excludeZeroScoreLog(logLines, isSuccess);
     // Truncate list of commits and log lines to fit within available context

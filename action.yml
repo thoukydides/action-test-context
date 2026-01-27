@@ -18,6 +18,10 @@ inputs:
     description: Regular expressions (one per line) applied to the log to identify additional lines that should be included in the context
     type: string
     default: ''
+  log_strip_regexps:
+    description: Regular expressions (one per line) applied to the log for content that should be removed
+    type: string
+    default: ''
   checkout_path:
     description: Relative path under $GITHUB_WORKSPACE (not the working directory) to the Git checkout
     type: string

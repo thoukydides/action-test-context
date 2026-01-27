@@ -18,6 +18,16 @@ interface LogPattern {
     re:     RegExp;
 }
 
+// Match line endings (allowing CRLF, CR, or LF)
+const LINE_ENDING = /\r\n|(?<!\r)\n|\r(?!\n)/g;
+
+// Patters to strip from the log
+const LOG_STRIP_REGEXP: RegExp[] = [
+    // Match ANSI colour codes (including textual representation of escape code)
+    // eslint-disable-next-line no-control-regex
+    /(?:\x1B|ESC)\[[0-9;]*[msuK]/g
+];
+
 // Patterns to recognise important log entries
 const LOG_REGEXP: LogPattern[] = [
     // GitHub Actions workflow commands
@@ -29,26 +39,20 @@ const LOG_REGEXP: LogPattern[] = [
 const SCORE_UNMATCHED       = 0;
 const SCORE_USER_PATTERN    = 50;
 
-// Match line endings (allowing CRLF, CR, or LF)
-const LINE_ENDING = /\r\n|(?<!\r)\n|\r(?!\n)/g;
-
-// Match ANSI colour codes (including textual representation of escape code)
-// eslint-disable-next-line no-control-regex
-const ANSI_ESCAPE = /(?:\x1B|ESC)\[[0-9;]*[msuK]/g;
-
 // Read the log file and score each line using the supplied patterns
-export function getLogLines(log_file: string, log_regexps: string[]): LogEntry[] {
+export function getLogLines(log_file: string, log_regexps: string[], log_strip_regexps: string[]): LogEntry[] {
     // Read the log file
     const log = readFileSync(log_file, { encoding: 'utf-8'});
     const lines = log.split(LINE_ENDING);
 
     // Prepare the regular expressions to test against the log
     const patterns = makeRegexps(log_regexps);
+    const stripPatterns = makeStripRegexps(log_strip_regexps);
 
     // Score each line of the log
     const scoreCounts = new Map<number, number>();
     const scored = lines.map((rawLine, index) => {
-        const line = rawLine.replaceAll(ANSI_ESCAPE, '').trim();
+        const line = stripPatterns.reduce((line, re) => line.replaceAll(re, ''), rawLine).trim();
         const score = patterns.reduce(
             (acc, { re, score }) => re.test(line) || re.test(rawLine) ? Math.max(acc, score) : acc,
             SCORE_UNMATCHED);
@@ -77,6 +81,19 @@ function makeRegexps(log_regexps: string[]): LogPattern[] {
             score: score !== undefined ? Number(score) : SCORE_USER_PATTERN,
             re:    new RegExp(pattern, flags)
         });
+    }
+    return patterns;
+}
+
+// Prepare the regular expressions to strip the log lines
+function makeStripRegexps(log_strip_regexps: string[]): RegExp[] {
+    const patterns = [...LOG_STRIP_REGEXP];
+    for (const log_strip_regexp of log_strip_regexps) {
+        if (!log_strip_regexp) continue; // getMultilineInput trims *after* filtering blanks
+        const [, pattern, flags] = /^\/((?:\\.|[^\\/])+)\/([dimsuv]*)$/.exec(log_strip_regexp) ?? [];
+        if (!pattern || flags === undefined) throw new Error(`Invalid log_strip_regexps pattern: ${log_strip_regexp}`);
+        const re = new RegExp(pattern, 'g' + flags); // (include global flag)
+        patterns.push(re);
     }
     return patterns;
 }

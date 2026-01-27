@@ -19,6 +19,7 @@ Various inputs are defined in the action to configure its operation:
 | `exit_code` | The test's exit code; `0` for success | *required*
 | `log_file` | Path to a file containing the test's stdout/stderr output | *required*
 | `log_regexps` | Regular expressions (one per line) applied to the log to identify additional lines that should be included in the context | `''`
+| `log_strip_regexps` | Regular expressions (one per line) applied to the log for content that should be removed | `''`
 | `checkout_path` | Relative path under `$GITHUB_WORKSPACE` (**not** the working directory) to the Git checkout | `'.'`
 | `max_tokens` | The maximum number of tokens to use (approximated by character count) | `500`
 
@@ -28,7 +29,7 @@ The `log_regexps` patterns may be prefixed by a score (`0`...`100`) indicating t
 - `80`: Warnings messages (`::warning` workflow command)
 - `90`: Error messages (`::error` workflow command)
 
-Each line of the log has ANSI colour codes and leading/trailing whitespace removed. Each of the `log_regexps` patterns is tested against both the original and cleaned version of each log line.
+Each line of the log has ANSI colour codes, anything matching `log_strip_regexps`, and leading/trailing whitespace removed. Each of the `log_regexps` patterns is tested against both the original and cleaned version of each log line.
 
 ## Outputs
 

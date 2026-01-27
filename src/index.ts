@@ -19,11 +19,12 @@ const COMMITS_FRACTION = 0.25; // 25% commits + 75% log highlights
 // Script entry point
 function run(): void {
     // Action inputs
-    const exit_code     = Number(core.getInput          ('exit_code',       { required: true }));
-    const log_file      =        core.getInput          ('log_file',        { required: true });
-    const log_regexps   =        core.getMultilineInput ('log_regexps',     { required: true });
-    const checkout_path =        core.getInput          ('checkout_path',   { required: true });
-    const max_tokens    = Number(core.getInput          ('max_tokens',      { required: true }));
+    const exit_code         = Number(core.getInput          ('exit_code',           { required: true }));
+    const log_file          =        core.getInput          ('log_file',            { required: true });
+    const log_regexps       =        core.getMultilineInput ('log_regexps',         { required: true });
+    const log_strip_regexps =        core.getMultilineInput ('log_strip_regexps',   { required: true });
+    const checkout_path     =        core.getInput          ('checkout_path',       { required: true });
+    const max_tokens        = Number(core.getInput          ('max_tokens',          { required: true }));
 
     // Only care whether the exit code indicates success or failure
     const isSuccess = exit_code === 0;
@@ -34,7 +35,7 @@ function run(): void {
     core.info(`Checked out code: ${version.description}`);
 
     // Read and score the log file lines
-    const logLines = getLogLines(log_file, log_regexps);
+    const logLines = getLogLines(log_file, log_regexps, log_strip_regexps);
 
     // Exclude score 0 log lines if test successful or there are higher scores
     const filteredLogLines = excludeZeroScoreLog(logLines, isSuccess);

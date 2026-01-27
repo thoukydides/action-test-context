@@ -5,6 +5,12 @@ import * as core from '@actions/core';
 import { LogEntry } from './get_log.js';
 import { plural } from './utils.js';
 
+// Minimum log message truncation length
+const MIN_LOG_CHARS = 100;
+
+// Minimum number of log lines to include
+const MIN_LOG_LINES = 1;
+
 // Size of the log in characters
 type LogChars = (logLines: LogEntry[]) => number;
 
@@ -35,23 +41,31 @@ export function truncateLog(logLines: LogEntry[], maxChars: number, getChars: Lo
     logLines = logLines.toSorted((a, b) => b.score - a.score || b.index - a.index);
 
     // Drop lowest priority lines until fits or only highest score remains
-    logLines = fitByOmission(logLines, maxChars, getChars);
-    logProgress('Selected log lines');
+    const priorityCount = getPriorityCount(logLines);
+    logLines = fitByOmission(logLines, priorityCount, maxChars, getChars);
+    logProgress('Selected priority log lines');
 
     // Truncate log lines if still too long
     logLines = fitByLineTruncation(logLines, maxChars, getChars);
     logProgress('Truncated log lines');
 
+    // Also drop priority lines down to a minimum size
+    logLines = fitByOmission(logLines, MIN_LOG_LINES, maxChars, getChars);
+    logProgress('Selected priority log lines');
+
     // Return the truncated log lines in their original (chronological) order
     return logLines.sort((a, b) => a.index - b.index);
 }
 
-// Attempt to fit log lines within budget by omitting lower priority lines
-function fitByOmission(logLines: LogEntry[], maxChars: number, getChars: LogChars): LogEntry[] {
-    // Minimum number of lines to keep (equal highest score)
+// Determine the number of priority lines (those with equal highest score)
+function getPriorityCount(logLines: LogEntry[]): number {
     const highestScore = logLines[0]?.score ?? 0;
-    let minLines = logLines.findIndex(line => line.score < highestScore);
-    if (minLines === -1) return logLines;
+    const index = logLines.findIndex(line => line.score < highestScore);
+    return index === -1 ? logLines.length : index;
+}
+
+// Attempt to fit log lines within budget by omitting lower priority lines
+function fitByOmission(logLines: LogEntry[], minLines: number, maxChars: number, getChars: LogChars): LogEntry[] {
     let maxLines = logLines.length;
 
     // Binary search to find the highest limit within available size
@@ -66,7 +80,7 @@ function fitByOmission(logLines: LogEntry[], maxChars: number, getChars: LogChar
 
 // Fit log lines within the budget by truncating to a maximum length
 function fitByLineTruncation(logLines: LogEntry[], maxChars: number, getChars: LogChars): LogEntry[] {
-    let minLineChars = 1;
+    let minLineChars = MIN_LOG_CHARS;
     let maxLineChars = Math.max(...logLines.map((l) => l.line.length), 0);
 
     // Binary search to find the highest limit within available size
