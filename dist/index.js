@@ -27936,8 +27936,8 @@ function run() {
     // Action inputs
     const exit_code = Number(coreExports.getInput('exit_code', { required: true }));
     const log_file = coreExports.getInput('log_file', { required: true });
-    const log_regexps = coreExports.getMultilineInput('log_regexps', { required: true });
-    const log_strip_regexps = coreExports.getMultilineInput('log_strip_regexps', { required: true });
+    const log_regexps = coreExports.getMultilineInput('log_regexps', { required: false });
+    const log_strip_regexps = coreExports.getMultilineInput('log_strip_regexps', { required: false });
     const checkout_path = coreExports.getInput('checkout_path', { required: true });
     const max_tokens = Number(coreExports.getInput('max_tokens', { required: true }));
     // Only care whether the exit code indicates success or failure

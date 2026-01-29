@@ -21,8 +21,8 @@ function run(): void {
     // Action inputs
     const exit_code         = Number(core.getInput          ('exit_code',           { required: true }));
     const log_file          =        core.getInput          ('log_file',            { required: true });
-    const log_regexps       =        core.getMultilineInput ('log_regexps',         { required: true });
-    const log_strip_regexps =        core.getMultilineInput ('log_strip_regexps',   { required: true });
+    const log_regexps       =        core.getMultilineInput ('log_regexps',         { required: false });
+    const log_strip_regexps =        core.getMultilineInput ('log_strip_regexps',   { required: false });
     const checkout_path     =        core.getInput          ('checkout_path',       { required: true });
     const max_tokens        = Number(core.getInput          ('max_tokens',          { required: true }));
 
