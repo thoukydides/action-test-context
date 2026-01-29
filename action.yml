@@ -29,7 +29,7 @@ inputs:
   max_tokens:
     description: The maximum number of tokens to use (approximated by character count)
     type: number
-    default: 500
+    default: 5000
   github_token:
     description: The GitHub token used to create an authenticated client
     type: string

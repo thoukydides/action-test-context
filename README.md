@@ -21,7 +21,7 @@ Various inputs are defined in the action to configure its operation:
 | `log_regexps` | Regular expressions (one per line) applied to the log to identify additional lines that should be included in the context | `''`
 | `log_strip_regexps` | Regular expressions (one per line) applied to the log for content that should be removed | `''`
 | `checkout_path` | Relative path under `$GITHUB_WORKSPACE` (**not** the working directory) to the Git checkout | `'.'`
-| `max_tokens` | The maximum number of tokens to use (approximated by character count) | `500`
+| `max_tokens` | The maximum number of tokens to use (approximated by character count) | `5000`
 
 The `log_regexps` patterns may be prefixed by a score (`0`...`100`) indicating their relative importance. Lines with lower scores are dropped if required to satisfy the `max_tokens` constraint. The action assigns the following scores itself:
 - `0`: Lines not matching any pattern (always omitted if there are any lines with non-zero scores or the `exit_code` is `0`)
