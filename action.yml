@@ -48,5 +48,5 @@ outputs:
     description: Are there any unreleased commits since the most recent Git tag; false if no release was found
 
 runs:
-  using: node20
+  using: node24
   main: dist/index.js
