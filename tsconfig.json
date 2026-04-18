@@ -17,7 +17,8 @@
         "outDir": "./dist",
         "pretty": true,
         "resolveJsonModule": true,
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "types": ["node"]
     },
     "exclude": [
         "dist",
